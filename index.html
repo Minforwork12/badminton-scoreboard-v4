@@ -213,9 +213,15 @@
             border-top: 1px solid var(--theme-border-highlight);
             border-left: 1px solid var(--theme-border-highlight);
             text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-            transition: transform 0.12s ease, background 0.3s;
+            cursor: pointer;
+            touch-action: manipulation;
+            position: relative;
+            transition: transform 0.12s ease, background 0.3s, filter 0.15s;
         }
+        .current-score:hover { filter: brightness(1.08); }
+        .current-score:active { filter: brightness(0.95); }
         .score-pop { transform: scale(1.12); }
+        .score-drop { transform: scale(0.9); }
 
         /* ==========================================
            MODERN CONTROL DECK UI/UX
@@ -559,8 +565,8 @@
                 </div>
             </div>
             <div class="scoreboard-right-backplate">
-                <div class="current-score" id="p1-curr-disp">0</div>
-                <div class="current-score" id="p2-curr-disp">0</div>
+                <div class="current-score" id="p1-curr-disp" onclick="handleScoreBoxTap(1)" title="แตะ 1 ครั้ง: +1 แต้ม | แตะ 2 ครั้งติดกัน: -1 แต้ม">0</div>
+                <div class="current-score" id="p2-curr-disp" onclick="handleScoreBoxTap(2)" title="แตะ 1 ครั้ง: +1 แต้ม | แตะ 2 ครั้งติดกัน: -1 แต้ม">0</div>
             </div>
         </div>
     </div>
@@ -968,6 +974,22 @@
             updateUI();
         }
 
+        const scoreTapTimers = { 1: null, 2: null };
+        function handleScoreBoxTap(player) {
+            if (scoreTapTimers[player]) {
+                // Double tap / double click detected -> decrease score by 1
+                clearTimeout(scoreTapTimers[player]);
+                scoreTapTimers[player] = null;
+                changeScore(player, -1);
+            } else {
+                // Single tap / click -> wait briefly to distinguish from double tap, then increase score by 1
+                scoreTapTimers[player] = setTimeout(() => {
+                    scoreTapTimers[player] = null;
+                    changeScore(player, 1);
+                }, 230);
+            }
+        }
+
         function changeScore(player, delta) {
             saveHistory();
             if (player === 1) {
@@ -978,7 +1000,9 @@
 
             if (delta > 0) {
                 servingPlayer = player;
-                animateScoreBox(player);
+                animateScoreBox(player, 'score-pop');
+            } else if (delta < 0) {
+                animateScoreBox(player, 'score-drop');
             }
 
             updateUI();
@@ -994,12 +1018,12 @@
             }
         }
 
-        function animateScoreBox(player) {
+        function animateScoreBox(player, animClass = 'score-pop') {
             const el = document.getElementById(player === 1 ? 'p1-curr-disp' : 'p2-curr-disp');
-            el.classList.remove('score-pop');
+            el.classList.remove('score-pop', 'score-drop');
             void el.offsetWidth;
-            el.classList.add('score-pop');
-            setTimeout(() => el.classList.remove('score-pop'), 150);
+            el.classList.add(animClass);
+            setTimeout(() => el.classList.remove(animClass), 150);
         }
 
         function setServing(player) {
